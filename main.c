@@ -50,6 +50,7 @@ int main(int argc, char **argv)
 
     // STEP 2: Mistrain the branch predictor by calling victim function here
     // To prevent any kind of patterns, ensure each time you train it a different number of times
+    // NOTE: vict_func does NOT need to be trained for attack to function
     int branches = (rand() % 11) + 30; // returns value between 30 and 40 inclusive
     for (i = branches; i > 0; i--)
 	vict_func((int *)huge_page, secret_array, 0);
